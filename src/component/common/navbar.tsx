@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
     <NavContainer>
       <NavList>
         <NavItem>
-          <NavLink>{`Hi, ${data?.email}`}</NavLink>
+          {<NavLink>{`Hi, ${data?.email ? data?.email : ""}`}</NavLink>}
           <NavLink
             onClick={() => {
               logoutHandler();

@@ -11,6 +11,7 @@ import LoadingCard from "../common/loadder";
 interface ITask {
   name: string;
   id: string;
+  isSelected?: boolean;
 }
 
 const TaskContainer = styled.div`
@@ -40,6 +41,7 @@ const CardWrapper = styled.div`
   width: 100%;
   max-height: 400px;
   overflow: auto;
+  margin-top:10px;
 `;
 const Card = styled.div`
   width: 90%;
@@ -52,6 +54,10 @@ const Card = styled.div`
   align-items: center;
   margin-bottom: 10px;
   transition: background-color 0.2s ease;
+  cursor: pointer;
+  &:hover {
+    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+  }
 `;
 
 const RemoveButton = styled.button`
@@ -96,10 +102,15 @@ const RemoveAllWrapper = styled.div`
   margin-bottom: 10px;
 `;
 
+const CheckboxInput = styled.input`
+  margin-right: 10px;
+`;
+
 const Task: React.FC = () => {
   const [tasks, setTasks] = useState<ITask[]>([]);
   const [taskInput, setTaskInput] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [selectedIds, setSelectedIds] = useState<String[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingRemove, setLoadingRemove] = useState(false);
   const [loadingRemoveAll, setLoadingRemoveAll] = useState(false);
@@ -110,8 +121,11 @@ const Task: React.FC = () => {
       setLoadingAll(true);
       try {
         const { data } = await getTasks();
+        const updatedTask: ITask[] = data?.map((item: ITask) => {
+          return { ...item, isSelected: false };
+        });
 
-        setTasks([...data]);
+        setTasks(updatedTask);
         setLoadingAll(false);
       } catch (error) {
         setLoadingAll(false);
@@ -128,7 +142,7 @@ const Task: React.FC = () => {
         setLoading(true);
         const { data } = await createTask({ name: taskInput });
         setLoading(false);
-        setTasks([...tasks, data]);
+        setTasks([...tasks, { ...data, isSelected: false }]);
         toast.success("Added Successfully", {
           position: "top-right",
           autoClose: 2000,
@@ -202,9 +216,10 @@ const Task: React.FC = () => {
   const handleRemoveTaskAll = async () => {
     try {
       setLoadingRemoveAll(true);
-      await deleteAllTask();
+      await deleteAllTask(selectedIds);
       setLoadingRemoveAll(false);
-      setTasks([]);
+      setTasks((prevTasks) => prevTasks.filter((task) => !task.isSelected));
+      setSelectedIds([]);
       toast.success("All Data Deleted Successfully", {
         position: "top-right",
         autoClose: 2000,
@@ -240,6 +255,21 @@ const Task: React.FC = () => {
     }
   };
 
+  const handleCheckboxChange = (taskId: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        return task.id === taskId
+          ? { ...task, isSelected: !task.isSelected }
+          : task;
+      })
+    );
+    setSelectedIds((prevSelectedIds) =>
+      prevSelectedIds.includes(taskId)
+        ? prevSelectedIds.filter((id: String) => id !== taskId)
+        : [...prevSelectedIds, taskId]
+    );
+  };
+
   return (
     <>
       {loadingAll ? (
@@ -259,19 +289,32 @@ const Task: React.FC = () => {
           <AddButton onClick={handleAddTask} disabled={loading}>
             {loading ? "Adding..." : "Add Task"}
           </AddButton>
-          {tasks.length > 0 && (
+          {tasks.length > 0 && selectedIds.length > 0 && (
             <RemoveAllWrapper>
               <RemoveButton onClick={handleRemoveTaskAll}>
-                {loadingRemoveAll ? "Removing..." : "Remove All"}
+                {loadingRemoveAll ? "Removing..." : "Bulk Delete"}
               </RemoveButton>
             </RemoveAllWrapper>
           )}
           <CardWrapper>
             {tasks.map((task, index) => (
-              <Card key={index}>
+              <Card key={index} onClick={() => handleCheckboxChange(task.id)}>
+                <CheckboxInput
+                  type="checkbox"
+                  checked={task.isSelected}
+                  readOnly
+                  // onChange={() => handleCheckboxChange(task.id)}
+                />
+                {/* <RemoveButton>
+                  {task.isSelected ? "Selected" : "Not Selected"}
+                </RemoveButton> */}
+
                 <TextSpan>{task?.name}</TextSpan>
                 <RemoveButton
-                  onClick={() => handleRemoveTask(task?.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveTask(task?.id);
+                  }}
                   disabled={loadingRemove}
                 >
                   {loadingRemove && selectedId === task?.id

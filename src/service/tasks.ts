@@ -11,6 +11,6 @@ export const createTask = async (data: any) => {
 export const deleteTask = async (id: string) => {
   return await useFetch.delete(`tasks/${id}`);
 };
-export const deleteAllTask = async () => {
-  return await useFetch.delete(`tasks/all`);
+export const deleteAllTask = async (ids: String[]) => {
+  return await useFetch.post(`tasks/bulkDelete`, { ids: ids });
 };
